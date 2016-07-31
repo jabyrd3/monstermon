@@ -2,9 +2,9 @@ var express = require('express');
 var router = express.Router();
 var pool;
 /* GET home page. */
-var tickWorld = function(client, cb) {
+var tickWorld = function(client, cb, done) {
     var worldSeed = parseInt(new Date().getTime() * (Math.random() * 100));
-    client.query('INSERT INTO world_state (time, seed) VALUES $1, $2', [new Date().getTime(), worldSeed], (err, res, done) => {
+    client.query('INSERT INTO world_state (time, seed) VALUES $1, $2', [new Date().getTime(), worldSeed], (err, res) => {
         done();
         console.log('world ticked');
         cb(worldSeed);
@@ -72,7 +72,7 @@ var Stop = function(lat, long, seed, worldSeed) {
     };
     return this;
 };
-router.get('/heartbeat', function(req, res, next) {
+router.post('/heartbeat', function(req, res, next) {
     var latLong = { lat: req.body.lat, long: req.body.long };
     var localStops = [];
     // to run a query we can acquire a client from the pool,
@@ -82,12 +82,12 @@ router.get('/heartbeat', function(req, res, next) {
         if (err) {
             return console.error('error fetching client from pool', err);
         }
-        client.query('select * from world_state where time = (select max(time) from world_state);', [], function(err, result, done) {
+        client.query('select * from world_state where time = (select max(time) from world_state);', [], function(err, result) {
             console.log('worldstate', result.rows);
             done();
             // if world state doesnt' yet exist, or if it's older than a minute, 
             // create a new world state / seed.
-            if (rows.result.length === 0 || rows.result[0].time < new Date().getTime() - 60000) {
+            if (result.rows.length === 0 || result.rows[0].time < new Date().getTime() - 60000) {
                 tickWorld(client, (worldSeed) => {
                     client.query('SELECT * FROM stops WHERE coordinates <-> point($1, $2) < 1;', [latLong.lat, latLong.long], function(err, result) {
                         //call `done()` to release the client back to the pool
@@ -101,6 +101,7 @@ router.get('/heartbeat', function(req, res, next) {
                             var stop = new Stop(latLong.lat, latLong.long, false, worldSeed);
                             client.query('INSERT INTO stops (coordinates, seed, state) VALUES point($1, $2), $3, $4', [latLong.lat, latLong.long, stop.seed, stop.state], () => {
                                 console.log('new spot created');
+                                done();
                                 localStops.push(stop);
                                 res.send(localStops);
                             });
@@ -116,7 +117,7 @@ router.get('/heartbeat', function(req, res, next) {
                         //output: 1
                     });
 
-                });
+                }, done);
             }
 
         });
