@@ -7,20 +7,16 @@
                 views: {
                     'app': {
                         template: `
-                        <h1>standard issue</h1>
+                        <h1>monstermon</h1>
+                        <pre>{{$ctrl.worldstate | json}}</pre>
+                        <game-window></game-window>
                         <div ui-view="content"></div>
                         <div ui-view="footer"></div>
                         <div ui-view="modalSlot"></div>
-                        `,
-                        controller: 'AppController'
+                        `
                     }
                 }
             });
         }])
-        .constant('PanniersConfig', { api: { app: 'http://localhost:8000' } }).controller('AppController', ['apiService', function(apiService) {
-            console.log('barebones angular nodejs postgres starter');
-            apiService.heartbeat().post({ lat: 1, long: 1 }).then(res => {
-                window.alert(res);
-            });
-        }]);
+        .constant('PanniersConfig', { api: { app: 'http://localhost:8000' } });
 })();
