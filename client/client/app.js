@@ -19,7 +19,7 @@
         }])
         .constant('PanniersConfig', { api: { app: 'http://localhost:8000' } }).controller('AppController', ['apiService', function(apiService) {
             console.log('barebones angular nodejs postgres starter');
-            apiService.get().then(res => {
+            apiService.heartbeat().post({ lat: 1, long: 1 }).then(res => {
                 window.alert(res);
             });
         }]);
