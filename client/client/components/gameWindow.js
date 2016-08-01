@@ -7,6 +7,8 @@ angular
         controller: ['$timeout', 'apiService', function($timeout, apiService) {
             var canvas, width, height, rows, columns, spots, fontSize, gameWorld, render, element, looper;
             this.$onInit = () => {
+                // on init we set up a looping call to the geolocation API for current
+                // position. 
                 looper = () => {
                     window
                         .navigator
@@ -87,22 +89,23 @@ angular
                 canvas.font = 'bold ' + fontSize + 'px monospace';
                 canvas.fillStyle = "black";
                 canvas.textAlign = 'center';
-                //randomize environment
-                for (var i = 0; i < spots; i++) {
-                    var number = Math.random();
-                    var gameObj = {};
-                    gameObj.ground = grounds.dirt;
-                    if (number >= 0.4) {
-                        gameObj.ground = grounds.sunshine;
-                    }
-                    gameWorld.push(gameObj);
-                }
-                //TODO: build walls / structures
-                //set player in middle
-                gameWorld[Math.floor(gameWorld.length / 2)].entity = entities.player;
 
                 //render block
                 render = function(serverData, location) {
+                    gameWorld = [];
+                    //randomize environment for cool hazy effect
+                    for (var i = 0; i < spots; i++) {
+                        var number = Math.random();
+                        var gameObj = {};
+                        gameObj.ground = grounds.dirt;
+                        if (number >= 0.4) {
+                            gameObj.ground = grounds.sunshine;
+                        }
+                        gameWorld.push(gameObj);
+                    }
+                    //TODO: build walls / structures
+                    //set player in middle
+
                     var minLat = location.latitude - .0075,
                         maxLat = location.latitude + .0075,
                         minLong = location.longitude - .0095,
