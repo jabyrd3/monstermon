@@ -5,7 +5,7 @@ angular
     .component('gameWindow', {
         template: `<canvas id="game" style="position:fixed; width: 100%;height: 100%;"></canvas>`,
         controller: ['$timeout', 'apiService', function($timeout, apiService) {
-            var canvas, width, height, rows, columns, spots, fontSize, gameWorld, render, element, looper, location;
+            var canvas, width, height, rows, columns, spots, fontSize, gameWorld, render, element, looper;
             this.$onInit = () => {
                 looper = () => {
                     window
@@ -17,7 +17,7 @@ angular
                                 lat: loc.coords.latitude,
                                 long: loc.coords.longitude
                             }).then(res => {
-                                render(res);
+                                render(res, loc.coords);
                                 console.log('this.world', res);
                                 $timeout(looper, 1000);
                             });
@@ -70,7 +70,12 @@ angular
                         Monster: function() {
                             this.text = 'm';
                             this.passable = false;
-                            this.name = 'snake';
+                            this.name = 'monster';
+                        },
+                        Spawn: function() {
+                            this.text = 's';
+                            this.passable = false;
+                            this.name = 'spawn';
                         },
                         player: {
                             text: '@',
@@ -78,32 +83,6 @@ angular
                             type: 'player'
                         }
                     };
-                var directionTile = {
-                    up: function(pos) {
-                        return above(pos);
-                    },
-                    right: function(pos) {
-                        return rightOf(pos);
-                    },
-                    down: function(pos) {
-                        return below(pos);
-                    },
-                    left: function(pos) {
-                        return leftOf(pos);
-                    },
-                    upLeft: function(pos) {
-                        return upLeftOf(pos);
-                    },
-                    upRight: function(pos) {
-                        return upRightOf(pos);
-                    },
-                    downLeft: function(pos) {
-                        return downLeftOf(pos);
-                    },
-                    downRight: function(pos) {
-                        return downRightOf(pos);
-                    }
-                };
                 //canvas globals
                 canvas.font = 'bold ' + fontSize + 'px monospace';
                 canvas.fillStyle = "black";
@@ -113,37 +92,48 @@ angular
                     var number = Math.random();
                     var gameObj = {};
                     gameObj.ground = grounds.dirt;
-                    if (number > 0.999) {
-                        gameObj.entity = new entities.Monster();
-                    } else if (number > 0.988 && number < 0.99) {
-                        gameObj.entity = grounds.tree;
-                    } else if (number >= 0.4) {
+                    if (number >= 0.4) {
                         gameObj.ground = grounds.sunshine;
-                    } else if (number < 0.4) {
-                        gameObj.ground = grounds.dirt;
-                    } else {
-                        gameObj.ground = grounds.dirt;
                     }
                     gameWorld.push(gameObj);
                 }
                 //TODO: build walls / structures
                 //set player in middle
                 gameWorld[Math.floor(gameWorld.length / 2)].entity = entities.player;
-                console.log(Math.floor(gameWorld.length / 2), gameWorld, gameWorld[Math.floor(gameWorld.length / 2)]);
 
                 //render block
-                render = function(serverData) {
-                    debugger;
-                    canvas.clearRect(0, 0, width, height);
-                    gameWorld[Math.floor(gameWorld.length / 2) + Math.floor(rows / 2)].entity = entities.player;
-                    // Get list of entities, then cause them to act. Two-pass counter-telesnake method
-                    var actionableEntities = [];
-                    // actionable entities
-                    for (var i = 0; i < gameWorld.length; i++) {
-                        if (gameWorld[i].entity !== undefined) {
-                            actionableEntities.push(i);
+                render = function(serverData, location) {
+                    var minLat = location.latitude - .0075,
+                        maxLat = location.latitude + .0075,
+                        minLong = location.longitude - .0095,
+                        maxLong = location.longitude + .0095,
+                        tickLat = (maxLat - minLat) / columns,
+                        tickLong = (maxLong - minLong) / rows;
+                    // map each monster spawn through this func
+                    serverData.map((spawn) => {
+                        // check lat/long range for 1 sq mile
+                        if (spawn.lat >= minLat &&
+                            spawn.lat < maxLat &&
+                            spawn.long >= minLong &&
+                            spawn.long < maxLong) {
+                            // if it is we gotta figure out where to draw it!
+                            var targetX = Math.floor((maxLong - spawn.long) / tickLong);
+                            var targetY = Math.floor((maxLat - spawn.lat) / tickLat);
+                            console.log(targetY * rows + targetX, minLong, maxLong, minLat, maxLat, spawn, targetX, targetY);
+                            gameWorld[targetY * rows + targetX].entity = new entities.Spawn();
+                            console.log(spawn.state.data.split(':')[1].split('|'));
+                            spawn.state.data.split(':')[1].split('|').map(monster => {
+                                if (monster.length > 0) {
+                                    var monsterY = parseInt(targetY) + parseInt(monster[2]);
+                                    var monsterX = parseInt(targetX) + parseInt(monster[1]);
+                                    gameWorld[monsterY * rows + monsterX].entity = new entities.Monster();
+                                }
+                            });
                         }
-                    }
+                    });
+                    canvas.clearRect(0, 0, width * devicePixelRatio, height * devicePixelRatio);
+                    gameWorld[Math.floor(gameWorld.length / 2) + Math.floor(rows / 2)].entity = entities.player;
+                    // Get list of entities, then cause them to act. 
                     // build and render row
                     for (var y = 0; y < rows; y++) {
                         var rowText = '';
