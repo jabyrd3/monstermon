@@ -1,10 +1,10 @@
-# starfish
+# monstermon
 
-Opinionated nodejs application boilerplate with express, postgres and angular.
+fast and dirty pokemon go clone, just the worldmap for now.
 
-temporary quickstart instructions for development:
+Proudly built with starfish.
 
-api layer:
+api:
 cd api; npm install; npm start;
 
 frontend:
